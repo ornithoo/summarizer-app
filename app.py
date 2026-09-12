@@ -1,6 +1,7 @@
 import streamlit as st
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import torch
+import re
 
 st.set_page_config(
     page_title="Peringkasan Berita Indonesia",
@@ -62,6 +63,33 @@ def load_model():
 
 with st.spinner("Memuat model, harap tunggu..."):
     tokenizer, model = load_model()
+
+# ── Fungsi Pembersihan dan Perapihan Teks (Pre & Post-Processing) ─
+def bersihkan_input(teks: str) -> str:
+    """Membersihkan whitespace dan menormalkan ke lowercase agar sesuai kamus model"""
+    teks = re.sub(r'\s+', ' ', teks)
+    return teks.strip().lower()
+
+def format_hasil_ringkasan(teks: str) -> str:
+    """Membersihkan artefak model dan mengembalikan huruf kapital di awal kalimat"""
+    # 1. Hapus rentetan tanda tanya yang tidak wajar (artefak token rusak)
+    teks = re.sub(r'\?+', '', teks).strip()
+    
+    # 2. Rapikan spasi di sekitar tanda baca (contoh: 'kata , kata' -> 'kata, kata')
+    teks = re.sub(r'\s+([,.:;!?])', r'\1', teks)
+    teks = re.sub(r'([(\[{])\s+', r'\1', teks)
+    teks = re.sub(r'\s+([)\]}])', r'\1', teks)
+    teks = re.sub(r'\s+', ' ', teks).strip()
+    
+    # 3. Kapitalisasi huruf pertama di setiap awal kalimat
+    kalimat = re.split(r'([.!?]\s*)', teks)
+    formatted = "".join([k.capitalize() for k in kalimat])
+    
+    # 4. Pastikan ringkasan diakhiri titik jika terpotong menggantung
+    if formatted and not formatted.endswith(('.', '!', '?')):
+        formatted += '.'
+        
+    return formatted
 
 # ── Deteksi kategori otomatis ─────────────────────────────────────
 KATA_KUNCI = {
@@ -132,28 +160,37 @@ if tombol:
         st.warning("Masukkan teks artikel terlebih dahulu.")
     else:
         with st.spinner("Sedang meringkas artikel..."):
+            # 1. Samakan input dengan pipeline pelatihan (huruf kecil & normalisasi)
+            teks_siap = bersihkan_input(input_teks)
+            
             inputs = tokenizer(
-                input_teks,
+                teks_siap,
                 max_length=512,
                 truncation=True,
                 return_tensors="pt"
             )
+            
+            # 2. Gunakan parameter dekode yang seimbang agar tidak memicu ????
             with torch.no_grad():
                 output_ids = model.generate(
                     inputs["input_ids"],
                     attention_mask=inputs["attention_mask"],
-                    max_new_tokens=256,
-                    num_beams=2,
-                    no_repeat_ngram_size=4,
-                    early_stopping=False,
-                    length_penalty=2.0,
+                    max_new_tokens=150,
+                    min_new_tokens=20,
+                    num_beams=3,
+                    no_repeat_ngram_size=3,
+                    early_stopping=True,
+                    length_penalty=1.0,
                 )
-            ringkasan = tokenizer.decode(
+                
+            ringkasan_mentah = tokenizer.decode(
                 output_ids[0],
                 skip_special_tokens=True,
                 clean_up_tokenization_spaces=True
             ).strip()
 
+            # 3. Format hasil ringkasan agar memiliki huruf kapital dan tanda baca rapi
+            ringkasan = format_hasil_ringkasan(ringkasan_mentah)
             kategori = deteksi_kategori(input_teks)
 
         # ── Output ────────────────────────────────────────────────
