@@ -83,23 +83,33 @@ def format_hasil_ringkasan(teks: str) -> str:
     # 2. Hapus tanda tanya berulang (artefak token rusak)
     teks = re.sub(r'\?+', '', teks).strip()
     
-    # 3. Rapikan tanda baca ganda atau tabrakan tanda baca (misal: ",." -> ".")
+    # 3. Perbaiki potongan subword yang sering macet sebelum ditutup
+    perbaikan_kata = {
+        r'\bekos\b': 'ekosistem',
+        r'\bvege\b': 'vegetasi',
+        r'\bvegetisi\b': 'vegetasi',
+        r'\bselalumenjadi\b': 'selalu menjadi',
+    }
+    for pola, pengganti in perbaikan_kata.items():
+        teks = re.sub(pola, pengganti, teks, flags=re.IGNORECASE)
+    
+    # 4. Rapikan tanda baca ganda atau tabrakan tanda baca (misal: ",." -> ".")
     teks = re.sub(r'[,;:]+\s*([.!?])', r'\1', teks)
     teks = re.sub(r'\s+([,.:;!?])', r'\1', teks)
     teks = re.sub(r'([(\[{])\s+', r'\1', teks)
     teks = re.sub(r'\s+([)\]}])', r'\1', teks)
     teks = re.sub(r'\s+', ' ', teks).strip()
     
-    # 4. Potong mundur kalimat terakhir jika terputus menggantung (tanpa tanda titik/seru/tanya di akhir)
+    # 5. Potong mundur jika kalimat terakhir terputus menggantung
     posisi_akhir = max(teks.rfind('.'), teks.rfind('!'), teks.rfind('?'))
     if posisi_akhir != -1:
         teks = teks[:posisi_akhir + 1].strip()
     
-    # 5. Kapitalisasi huruf pertama di setiap awal kalimat
+    # 6. Kapitalisasi huruf pertama di setiap awal kalimat
     kalimat = re.split(r'([.!?]\s*)', teks)
     formatted = "".join([k.capitalize() for k in kalimat])
     
-    # 6. Pastikan kalimat diakhiri tanda baca penutup
+    # 7. Pastikan kalimat diakhiri tanda baca penutup
     if formatted and not formatted.endswith(('.', '!', '?')):
         formatted += '.'
         
@@ -176,7 +186,6 @@ if tombol:
         st.warning("Masukkan teks artikel terlebih dahulu.")
     else:
         with st.spinner("Sedang meringkas artikel..."):
-            # 1. Bersihkan dan normalkan input sebelum masuk ke tokenizer
             teks_siap = bersihkan_input(input_teks)
             
             inputs = tokenizer(
@@ -186,15 +195,15 @@ if tombol:
                 return_tensors="pt"
             )
             
-            # 2. Parameter generasi teks yang leluasa agar kalimat selesai tuntas
             with torch.no_grad():
                 output_ids = model.generate(
                     inputs["input_ids"],
                     attention_mask=inputs["attention_mask"],
-                    max_new_tokens=200,
-                    min_new_tokens=20,
+                    max_new_tokens=220,
+                    min_new_tokens=25,
                     num_beams=3,
-                    no_repeat_ngram_size=3,
+                    repetition_penalty=1.1,
+                    no_repeat_ngram_size=0,
                     early_stopping=True,
                     length_penalty=1.0,
                 )
@@ -205,7 +214,6 @@ if tombol:
                 clean_up_tokenization_spaces=True
             ).strip()
 
-            # 3. Rapikan hasil teks dan pangkas kalimat yang belum tuntas
             ringkasan = format_hasil_ringkasan(ringkasan_mentah)
             kategori = deteksi_kategori(input_teks)
 
