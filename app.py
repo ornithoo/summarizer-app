@@ -66,26 +66,35 @@ with st.spinner("Memuat model, harap tunggu..."):
 
 # ── Fungsi Pembersihan dan Perapihan Teks (Pre & Post-Processing) ─
 def bersihkan_input(teks: str) -> str:
-    """Membersihkan whitespace dan menormalkan ke lowercase agar sesuai kamus model"""
+    # 1. Hapus dateline / nama media di awal teks (misal: "KOMPAS.com - ", "JAKARTA, CNN - ", dll)
+    teks = re.sub(r'^[A-Za-z0-9\.\s/,-]+?\s*[-–—]\s*', '', teks.strip())
+    
+    # 2. Hapus URL atau link jika ada yang tertinggal
+    teks = re.sub(r'https?://\S+|www\.\S+', '', teks)
+    
+    # 3. Normalkan spasi dan samakan ke huruf kecil sesuai format training model
     teks = re.sub(r'\s+', ' ', teks)
     return teks.strip().lower()
 
 def format_hasil_ringkasan(teks: str) -> str:
-    """Membersihkan artefak model dan mengembalikan huruf kapital di awal kalimat"""
-    # 1. Hapus rentetan tanda tanya yang tidak wajar (artefak token rusak)
+    # 1. Bersihkan jika ada nama portal/ekstensi situs yang lolos di awal kalimat (misal: "Bas.Com -", "kompas.com -")
+    teks = re.sub(r'^[A-Za-z0-9\.]+(?:\.com|\.co\.id|\.id|\.net)\s*[-–—:]*\s*', '', teks, flags=re.IGNORECASE).strip()
+    
+    # 2. Hapus tanda tanya berulang (artefak token rusak)
     teks = re.sub(r'\?+', '', teks).strip()
     
-    # 2. Rapikan spasi di sekitar tanda baca (contoh: 'kata , kata' -> 'kata, kata')
+    # 3. Rapikan tanda baca ganda atau tabrakan tanda baca (misal: ",." -> ".")
+    teks = re.sub(r'[,;:]+\s*([.!?])', r'\1', teks)
     teks = re.sub(r'\s+([,.:;!?])', r'\1', teks)
     teks = re.sub(r'([(\[{])\s+', r'\1', teks)
     teks = re.sub(r'\s+([)\]}])', r'\1', teks)
     teks = re.sub(r'\s+', ' ', teks).strip()
     
-    # 3. Kapitalisasi huruf pertama di setiap awal kalimat
+    # 4. Kapitalisasi huruf pertama di setiap awal kalimat
     kalimat = re.split(r'([.!?]\s*)', teks)
     formatted = "".join([k.capitalize() for k in kalimat])
     
-    # 4. Pastikan ringkasan diakhiri titik jika terpotong menggantung
+    # 5. Pastikan kalimat terakhir memiliki tanda baca penutup
     if formatted and not formatted.endswith(('.', '!', '?')):
         formatted += '.'
         
@@ -124,6 +133,8 @@ KATA_KUNCI = {
         "presiden", "menteri", "pemerintah", "dpr", "polisi", "hukum",
         "korupsi", "kpk", "sidang", "kebijakan", "pilkada", "pemilu",
         "partai", "gubernur", "bencana", "gempa", "banjir", "kebakaran",
+        "gunung", "erupsi", "lahar", "vulkanik", "tsunami", "longsor",
+        "ekosistem", "habitat", "konservasi", "vegetasi",
         "ekonomi", "inflasi", "saham", "rupiah", "ekspor", "impor",
         "kesehatan", "rumah sakit", "vaksin", "militer", "perang"
     ],
@@ -160,7 +171,7 @@ if tombol:
         st.warning("Masukkan teks artikel terlebih dahulu.")
     else:
         with st.spinner("Sedang meringkas artikel..."):
-            # 1. Samakan input dengan pipeline pelatihan (huruf kecil & normalisasi)
+            # 1. Bersihkan dan normalkan input sebelum masuk ke tokenizer
             teks_siap = bersihkan_input(input_teks)
             
             inputs = tokenizer(
@@ -170,7 +181,7 @@ if tombol:
                 return_tensors="pt"
             )
             
-            # 2. Gunakan parameter dekode yang seimbang agar tidak memicu ????
+            # 2. Parameter generasi teks yang seimbang agar tidak memicu halusinasi/tanda tanya
             with torch.no_grad():
                 output_ids = model.generate(
                     inputs["input_ids"],
@@ -189,7 +200,7 @@ if tombol:
                 clean_up_tokenization_spaces=True
             ).strip()
 
-            # 3. Format hasil ringkasan agar memiliki huruf kapital dan tanda baca rapi
+            # 3. Rapikan hasil teks dan kembalikan kapitalisasi awal kalimat
             ringkasan = format_hasil_ringkasan(ringkasan_mentah)
             kategori = deteksi_kategori(input_teks)
 
