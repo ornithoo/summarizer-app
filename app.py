@@ -241,4 +241,4 @@ if tombol:
         c3.metric("Rasio Kompresi",    f"{rasio}%")
 
 st.markdown("---")
-st.caption("Tugas Akhir — Peringkasan Teks Otomatis Artikel Berita Bahasa Indonesia | IndoBART-v2 + IndoSUM")
+st.caption("Tugas Akhir — Peringkasan Teks Otomatis Artikel Berita Bahasa Indonesia | IndoBART-v2")
