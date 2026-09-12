@@ -77,7 +77,7 @@ def bersihkan_input(teks: str) -> str:
     return teks.strip().lower()
 
 def format_hasil_ringkasan(teks: str) -> str:
-    # 1. Bersihkan jika ada nama portal/ekstensi situs yang lolos di awal kalimat (misal: "Bas.Com -", "kompas.com -")
+    # 1. Bersihkan jika ada nama portal/ekstensi situs yang lolos di awal kalimat
     teks = re.sub(r'^[A-Za-z0-9\.]+(?:\.com|\.co\.id|\.id|\.net)\s*[-–—:]*\s*', '', teks, flags=re.IGNORECASE).strip()
     
     # 2. Hapus tanda tanya berulang (artefak token rusak)
@@ -90,11 +90,16 @@ def format_hasil_ringkasan(teks: str) -> str:
     teks = re.sub(r'\s+([)\]}])', r'\1', teks)
     teks = re.sub(r'\s+', ' ', teks).strip()
     
-    # 4. Kapitalisasi huruf pertama di setiap awal kalimat
+    # 4. Potong mundur kalimat terakhir jika terputus menggantung (tanpa tanda titik/seru/tanya di akhir)
+    posisi_akhir = max(teks.rfind('.'), teks.rfind('!'), teks.rfind('?'))
+    if posisi_akhir != -1:
+        teks = teks[:posisi_akhir + 1].strip()
+    
+    # 5. Kapitalisasi huruf pertama di setiap awal kalimat
     kalimat = re.split(r'([.!?]\s*)', teks)
     formatted = "".join([k.capitalize() for k in kalimat])
     
-    # 5. Pastikan kalimat terakhir memiliki tanda baca penutup
+    # 6. Pastikan kalimat diakhiri tanda baca penutup
     if formatted and not formatted.endswith(('.', '!', '?')):
         formatted += '.'
         
@@ -181,12 +186,12 @@ if tombol:
                 return_tensors="pt"
             )
             
-            # 2. Parameter generasi teks yang seimbang agar tidak memicu halusinasi/tanda tanya
+            # 2. Parameter generasi teks yang leluasa agar kalimat selesai tuntas
             with torch.no_grad():
                 output_ids = model.generate(
                     inputs["input_ids"],
                     attention_mask=inputs["attention_mask"],
-                    max_new_tokens=150,
+                    max_new_tokens=200,
                     min_new_tokens=20,
                     num_beams=3,
                     no_repeat_ngram_size=3,
@@ -200,7 +205,7 @@ if tombol:
                 clean_up_tokenization_spaces=True
             ).strip()
 
-            # 3. Rapikan hasil teks dan kembalikan kapitalisasi awal kalimat
+            # 3. Rapikan hasil teks dan pangkas kalimat yang belum tuntas
             ringkasan = format_hasil_ringkasan(ringkasan_mentah)
             kategori = deteksi_kategori(input_teks)
 
