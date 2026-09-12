@@ -1,7 +1,7 @@
-streamlit
-transformers
-torch
-sentencepiece
-protobuf
-accelerate
-rouge-score
+streamlit==1.38.0
+transformers==4.44.2
+torch==2.4.1
+sentencepiece==0.2.0
+protobuf==4.25.4
+accelerate==0.33.0
+rouge-score==0.1.2
