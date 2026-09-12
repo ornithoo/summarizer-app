@@ -1,8 +1,6 @@
 import streamlit as st
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-from rouge_score import rouge_scorer
 import torch
-import re
 
 st.set_page_config(
     page_title="Peringkasan Berita Indonesia",
@@ -45,22 +43,11 @@ st.markdown("""
     font-weight: 600;
     margin-bottom: 12px;
 }
-.label-rouge {
-    font-size: 13px;
-    color: #555;
-    margin-bottom: 2px;
-    font-weight: 600;
-}
-.nilai-rouge {
-    font-size: 26px;
-    font-weight: bold;
-    color: #1f3d7a;
-}
 </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="judul-app">Peringkasan Teks Berita Otomatis</div>', unsafe_allow_html=True)
-st.markdown('<div class="subjudul-app">Model: IndoBART-v2 &nbsp;|&nbsp; Dataset: IndoSUM &nbsp;|&nbsp; Evaluasi: ROUGE</div>', unsafe_allow_html=True)
+st.markdown('<div class="subjudul-app">Model: IndoBART-v2 &nbsp;|&nbsp; Dataset: IndoSUM</div>', unsafe_allow_html=True)
 st.markdown("---")
 
 # ── Load model ───────────────────────────────────────────────────
@@ -76,74 +63,62 @@ def load_model():
 with st.spinner("Memuat model, harap tunggu..."):
     tokenizer, model = load_model()
 
-# ── Deteksi kategori otomatis dari teks ─────────────────────────
-KATA_KUNCI_KATEGORI = {
+# ── Deteksi kategori otomatis ─────────────────────────────────────
+KATA_KUNCI = {
     "Olahraga": [
         "gol", "liga", "pertandingan", "pemain", "klub", "sepak bola",
-        "bola basket", "badminton", "tenis", "olimpiade", "juara", "latihan",
-        "pelatih", "skuad", "turnamen", "atletik", "renang", "voli",
-        "tinju", "motogp", "f1", "sirkuit", "balap", "medali"
+        "bola basket", "badminton", "tenis", "olimpiade", "juara",
+        "pelatih", "turnamen", "atletik", "renang", "medali", "balap",
+        "motogp", "f1", "sirkuit", "tinju", "voli"
     ],
     "Showbiz": [
         "artis", "aktor", "aktris", "film", "sinetron", "lagu", "album",
-        "konser", "penyanyi", "band", "musisi", "gosip", "selebriti",
-        "drama", "serial", "sutradara", "produser", "spotify", "youtube",
-        "instagram", "viral", "idol", "kpop"
+        "konser", "penyanyi", "band", "musisi", "selebriti", "drama",
+        "serial", "sutradara", "kpop", "idol", "viral", "spotify"
     ],
     "Teknologi": [
         "aplikasi", "smartphone", "iphone", "android", "laptop", "komputer",
         "internet", "artificial intelligence", "ai", "robot", "startup",
         "digital", "software", "hardware", "gadget", "samsung", "apple",
-        "google", "microsoft", "data", "siber", "hack", "teknologi",
-        "jaringan", "5g", "satelit", "chip", "processor"
+        "google", "microsoft", "5g", "satelit", "chip", "siber", "hack"
     ],
     "Hiburan": [
         "wisata", "liburan", "kuliner", "restoran", "cafe", "makanan",
-        "fashion", "gaya hidup", "hobi", "pameran", "festival", "konser",
+        "fashion", "gaya hidup", "hobi", "pameran", "festival",
         "bioskop", "streaming", "netflix", "game", "esport"
     ],
     "Inspirasi": [
         "motivasi", "sukses", "pengusaha", "prestasi", "beasiswa",
-        "pendidikan", "mahasiswa", "pelajar", "inovasi", "kreasi",
-        "wirausaha", "umkm", "karir", "tips", "produktif", "inspirasi"
+        "pendidikan", "mahasiswa", "inovasi", "wirausaha", "umkm",
+        "karir", "produktif", "inspirasi", "kreasi"
     ],
     "Tajuk Utama": [
-        "presiden", "menteri", "pemerintah", "dpr", "mpr", "polisi",
-        "hukum", "korupsi", "kpk", "sidang", "anggaran", "kebijakan",
-        "pilkada", "pemilu", "partai", "gubernur", "bupati", "walikota",
-        "bencana", "gempa", "banjir", "kebakaran", "kecelakaan",
+        "presiden", "menteri", "pemerintah", "dpr", "polisi", "hukum",
+        "korupsi", "kpk", "sidang", "kebijakan", "pilkada", "pemilu",
+        "partai", "gubernur", "bencana", "gempa", "banjir", "kebakaran",
         "ekonomi", "inflasi", "saham", "rupiah", "ekspor", "impor",
-        "covid", "kesehatan", "rumah sakit", "vaksin", "militer",
-        "perang", "diplomasi", "pbb", "asean"
+        "kesehatan", "rumah sakit", "vaksin", "militer", "perang"
     ],
 }
 
 def deteksi_kategori(teks: str) -> str:
     teks_lower = teks.lower()
-    skor = {kat: 0 for kat in KATA_KUNCI_KATEGORI}
-    for kat, kata_list in KATA_KUNCI_KATEGORI.items():
+    skor = {kat: 0 for kat in KATA_KUNCI}
+    for kat, kata_list in KATA_KUNCI.items():
         for kata in kata_list:
             if kata in teks_lower:
                 skor[kat] += 1
-    kategori_terpilih = max(skor, key=skor.get)
-    if skor[kategori_terpilih] == 0:
-        return "Tajuk Utama"
-    return kategori_terpilih
+    best = max(skor, key=skor.get)
+    return best if skor[best] > 0 else "Tajuk Utama"
 
-# ── Input ────────────────────────────────────────────────────────
+# ── Input ─────────────────────────────────────────────────────────
 st.subheader("Input Artikel Berita")
 
 input_teks = st.text_area(
     "Teks Artikel",
     placeholder="Tempelkan artikel berita berbahasa Indonesia di sini...",
-    height=280,
+    height=300,
     label_visibility="collapsed"
-)
-
-referensi_teks = st.text_area(
-    "Ringkasan Referensi (opsional — untuk menghitung skor ROUGE)",
-    placeholder="Masukkan ringkasan referensi jika ingin melihat skor ROUGE...",
-    height=90,
 )
 
 st.markdown("")
@@ -151,7 +126,7 @@ kol1, kol2, kol3 = st.columns([1.5, 2, 1.5])
 with kol2:
     tombol = st.button("Sumarisasi", use_container_width=True, type="primary")
 
-# ── Proses ───────────────────────────────────────────────────────
+# ── Proses ────────────────────────────────────────────────────────
 if tombol:
     if not input_teks.strip():
         st.warning("Masukkan teks artikel terlebih dahulu.")
@@ -179,7 +154,6 @@ if tombol:
                 clean_up_tokenization_spaces=True
             ).strip()
 
-            # Deteksi kategori otomatis
             kategori = deteksi_kategori(input_teks)
 
         # ── Output ────────────────────────────────────────────────
@@ -204,36 +178,6 @@ if tombol:
         c1.metric("Panjang Artikel",   f"{jml_kata_artikel} kata")
         c2.metric("Panjang Ringkasan", f"{jml_kata_ringkasan} kata")
         c3.metric("Rasio Kompresi",    f"{rasio}%")
-
-        # ── ROUGE ─────────────────────────────────────────────────
-        if referensi_teks.strip():
-            st.markdown("")
-            st.subheader("Evaluasi ROUGE")
-            st.caption("Perbandingan ringkasan model dengan ringkasan referensi.")
-
-            sc   = rouge_scorer.RougeScorer(["rouge1", "rouge2", "rougeL"], use_stemmer=False)
-            skor = sc.score(referensi_teks.strip(), ringkasan)
-
-            r1 = round(skor["rouge1"].fmeasure * 100, 2)
-            r2 = round(skor["rouge2"].fmeasure * 100, 2)
-            rl = round(skor["rougeL"].fmeasure * 100, 2)
-
-            cr1, cr2, crl = st.columns(3)
-
-            with cr1:
-                st.markdown('<div class="label-rouge">ROUGE-1</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="nilai-rouge">{r1}%</div>', unsafe_allow_html=True)
-                st.progress(min(r1 / 100, 1.0))
-            with cr2:
-                st.markdown('<div class="label-rouge">ROUGE-2</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="nilai-rouge">{r2}%</div>', unsafe_allow_html=True)
-                st.progress(min(r2 / 100, 1.0))
-            with crl:
-                st.markdown('<div class="label-rouge">ROUGE-L</div>', unsafe_allow_html=True)
-                st.markdown(f'<div class="nilai-rouge">{rl}%</div>', unsafe_allow_html=True)
-                st.progress(min(rl / 100, 1.0))
-        else:
-            st.info("Masukkan ringkasan referensi di atas untuk melihat skor ROUGE.")
 
 st.markdown("---")
 st.caption("Tugas Akhir — Peringkasan Teks Otomatis Artikel Berita Bahasa Indonesia | IndoBART-v2 + IndoSUM")
