@@ -1,0 +1,8 @@
+streamlit
+transformers
+sentencepiece
+protobuf
+accelerate
+rouge-score
+plotly
+pandas
