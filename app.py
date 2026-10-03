@@ -83,7 +83,11 @@ def deteksi_kategori(teks):
 # ── Load model (cache agar tidak reload setiap klik) ─────────────
 @st.cache_resource(show_spinner=False)
 def load_model(model_id):
-    tok = AutoTokenizer.from_pretrained(model_id)
+    tok = AutoTokenizer.from_pretrained(
+        model_id,
+        use_fast=False,          # paksa tokenizer SentencePiece "slow" bawaan IndoBART
+        trust_remote_code=True,  # jaga-jaga kalau repo model butuh kode tokenizer custom
+    )
     mdl = AutoModelForSeq2SeqLM.from_pretrained(model_id, torch_dtype=torch.float32)
     mdl.eval()
     return tok, mdl
