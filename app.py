@@ -89,12 +89,13 @@ def load_model(model_id):
     return tok, mdl
 
 # ── Load data uji IndoSum dari file CSV (article, summary, category) ─
+NAMA_FILE_DATA = "indosum_test01.csv"
+
 @st.cache_data
 def load_test_data():
-    path = "indosum_test01.csv"
-    if not os.path.exists(path):
+    if not os.path.exists(NAMA_FILE_DATA):
         return []
-    df = pd.read_csv(path)
+    df = pd.read_csv(NAMA_FILE_DATA)
     df = df.dropna(subset=["article", "summary"])
     data = []
     for _, row in df.iterrows():
@@ -155,7 +156,7 @@ with col_input:
 
     else:
         if not test_data:
-            st.error("File indosum_test01_flat.csv tidak ditemukan di folder app.")
+            st.error(f"File '{NAMA_FILE_DATA}' tidak ditemukan di folder app.")
         else:
             idx = st.selectbox(
                 "Pilih artikel dari dataset IndoSum:",
