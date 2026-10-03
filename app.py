@@ -6,6 +6,7 @@ import json
 import os
 import plotly.graph_objects as go
 import pandas as pd
+from indobenchmark import IndoNLGTokenizer 
 
 st.set_page_config(
     page_title="Peringkasan Berita Indonesia",
@@ -81,13 +82,9 @@ def deteksi_kategori(teks):
     return best if skor[best] > 0 else "Tajuk Utama"
 
 # ── Load model (cache agar tidak reload setiap klik) ─────────────
-@st.cache_resource(show_spinner=False)
+@st.cache_resource(show_spinner=False, max_entries=1)
 def load_model(model_id):
-    tok = AutoTokenizer.from_pretrained(
-        model_id,
-        use_fast=False,          # paksa tokenizer SentencePiece "slow" bawaan IndoBART
-        trust_remote_code=True,  # jaga-jaga kalau repo model butuh kode tokenizer custom
-    )
+    tok = IndoNLGTokenizer.from_pretrained(model_id)
     mdl = AutoModelForSeq2SeqLM.from_pretrained(model_id, torch_dtype=torch.float32)
     mdl.eval()
     return tok, mdl
