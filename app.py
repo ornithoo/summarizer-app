@@ -39,16 +39,16 @@ st.markdown("---")
 # DAFTAR 10 MODEL — sesuaikan nama repo dengan yang Anda upload
 # ================================================================
 MODELS = {
-    "Model 1  — LR=5e-6, BS=4  | ROUGE-L F1: 69.20%": "Lyenseptryanti/indobart-lr5e6-bs4",
-    "Model 2  — LR=1e-5, BS=4  | ROUGE-L F1: 69.68%  [Terbaik]": "Lyenseptryanti/indobart-lr1e5-bs4",
-    "Model 3  — LR=5e-5, BS=4  | ROUGE-L F1: 68.95%": "Lyenseptryanti/indobart-lr5e5-bs4",
-    "Model 4  — LR=1e-4, BS=4  | ROUGE-L F1: 67.82%": "Lyenseptryanti/indobart-lr1e4-bs4",
-    "Model 5  — LR=1e-3, BS=4  | ROUGE-L F1: 2.18%":  "Lyenseptryanti/indobart-lr1e3-bs4",
-    "Model 6  — LR=5e-6, BS=8  | ROUGE-L F1: 69.14%": "Lyenseptryanti/indobart-lr5e6-bs8",
-    "Model 7  — LR=1e-5, BS=8  | ROUGE-L F1: 69.04%": "Lyenseptryanti/indobart-lr1e5-bs8",
-    "Model 8  — LR=5e-5, BS=8  | ROUGE-L F1: 68.96%": "Lyenseptryanti/indobart-lr5e5-bs8",
-    "Model 9  — LR=1e-4, BS=8  | ROUGE-L F1: 68.62%": "Lyenseptryanti/indobart-lr1e4-bs8",
-    "Model 10 — LR=1e-3, BS=8  | ROUGE-L F1: 9.37%":  "Lyenseptryanti/indobart-lr1e3-bs8",
+    "Model 1  — LR=5e-6, BS=4": "Lyenseptryanti/indobart-lr5e6-bs4",
+    "Model 2  — LR=1e-5, BS=4 [Terbaik]": "Lyenseptryanti/indobart-lr1e5-bs4",
+    "Model 3  — LR=5e-5, BS=4": "Lyenseptryanti/indobart-lr5e5-bs4",
+    "Model 4  — LR=1e-4, BS=4": "Lyenseptryanti/indobart-lr1e4-bs4",
+    "Model 5  — LR=1e-3, BS=4":  "Lyenseptryanti/indobart-lr1e3-bs4",
+    "Model 6  — LR=5e-6, BS=8": "Lyenseptryanti/indobart-lr5e6-bs8",
+    "Model 7  — LR=1e-5, BS=8": "Lyenseptryanti/indobart-lr1e5-bs8",
+    "Model 8  — LR=5e-5, BS=8": "Lyenseptryanti/indobart-lr5e5-bs8",
+    "Model 9  — LR=1e-4, BS=8": "Lyenseptryanti/indobart-lr1e4-bs8",
+    "Model 10 — LR=1e-3, BS=8":  "Lyenseptryanti/indobart-lr1e3-bs8",
 }
 
 # Skor F1 hasil training untuk grafik perbandingan
@@ -205,9 +205,8 @@ with col_output:
                         early_stopping=True,
                     )
                 ringkasan = tokenizer.decode(
-                    output_ids[0],
-                    skip_special_tokens=True,
-                    clean_up_tokenization_spaces=True
+                    output_ids[0].tolist(),
+                    skip_special_tokens=True
                 ).strip()
                 kategori = kategori_fix if kategori_fix else deteksi_kategori(artikel_input)
 
