@@ -84,7 +84,7 @@ def deteksi_kategori(teks):
 # ── Load model (cache agar tidak reload setiap klik) ─────────────
 @st.cache_resource(show_spinner=False, max_entries=1)
 def load_model(model_id):
-    tok = IndoNLGTokenizer.from_pretrained(model_id)
+    tok = IndoNLGTokenizer.from_pretrained("indobenchmark/indobart-v2")
     mdl = AutoModelForSeq2SeqLM.from_pretrained(model_id, torch_dtype=torch.float32)
     mdl.eval()
     return tok, mdl
