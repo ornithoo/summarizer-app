@@ -1,7 +1,8 @@
-streamlit
-torch
+streamlit==1.38.0
+torch==2.3.1
 transformers==4.44.2
-sentencepiece
-rouge-score
-plotly
-pandas
+tokenizers==0.19.1
+sentencepiece==0.2.0
+rouge-score==0.1.2
+plotly==5.24.0
+pandas==2.2.2
