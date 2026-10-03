@@ -88,34 +88,24 @@ def load_model(model_id):
     mdl.eval()
     return tok, mdl
 
-# ── Load data uji IndoSum dari file JSONL ─────────────────────────
+# ── Load data uji IndoSum dari file CSV (article, summary, category) ─
 @st.cache_data
 def load_test_data():
-    path = "test.01.jsonl"
+    path = "indosum_test01.csv"
     if not os.path.exists(path):
         return []
+    df = pd.read_csv(path)
+    df = df.dropna(subset=["article", "summary"])
     data = []
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
-            item = json.loads(line)
-            paragraphs = item.get("paragraphs", [])
-            if paragraphs and isinstance(paragraphs[0], list):
-                article = " ".join(" ".join(s) for p in paragraphs for s in p) \
-                          if isinstance(paragraphs[0][0], list) \
-                          else " ".join(" ".join(p) for p in paragraphs)
-            else:
-                article = " ".join(paragraphs)
-            summary_raw = item.get("summary", [])
-            summary = " ".join(summary_raw) if isinstance(summary_raw, list) else str(summary_raw)
-            if article.strip() and summary.strip():
-                data.append({
-                    "article":  article.strip(),
-                    "summary":  summary.strip(),
-                    "category": item.get("category", ""),
-                })
+    for _, row in df.iterrows():
+        article = str(row["article"]).strip()
+        summary = str(row["summary"]).strip()
+        if article and summary:
+            data.append({
+                "article":  article,
+                "summary":  summary,
+                "category": str(row.get("category", "")).strip(),
+            })
     return data
 
 test_data = load_test_data()
@@ -165,7 +155,7 @@ with col_input:
 
     else:
         if not test_data:
-            st.error("File test.01.jsonl tidak ditemukan di folder app.")
+            st.error("File indosum_test01_flat.csv tidak ditemukan di folder app.")
         else:
             idx = st.selectbox(
                 "Pilih artikel dari dataset IndoSum:",
@@ -318,4 +308,4 @@ for i,(label,skor) in enumerate(SKOR_TRAINING.items()):
 st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 st.markdown("---")
-st.caption("Tugas Akhir — Peringkasan Teks Otomatis Artikel Berita Bahasa Indonesia | IndoBART-v2 + IndoSUM")
+st.caption("Peringkasan Teks Otomatis Artikel Berita Bahasa Indonesia | IndoBART-v2")
