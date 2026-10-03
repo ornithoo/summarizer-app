@@ -15,7 +15,7 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-.judul { text-align:center; font-size:26px; font-weight:bold; color:#1f3d7a; margin-bottom:4px; }
+.judul { text-align:center; font-size:26px; font-weight:bold; color:#5B7FA6; margin-bottom:4px; }
 .subjudul { text-align:center; font-size:13px; color:#666; margin-bottom:16px; }
 .kotak-hasil {
     background:#f0f7f0; border-left:5px solid #2e7d32;
