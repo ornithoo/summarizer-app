@@ -176,7 +176,7 @@ with col_input:
                 st.write(referensi_input)
 
     st.markdown("")
-    tombol = st.button("Sumarisasi", use_container_width=True, type="primary")
+    tombol = st.button("Ringkas Teks", use_container_width=True, type="primary")
 
 # ── OUTPUT ────────────────────────────────────────────────────────
 with col_output:
